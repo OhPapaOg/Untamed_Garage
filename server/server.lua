@@ -9,25 +9,22 @@ Citizen.CreateThread(function()
             job VARCHAR(50) NOT NULL,
             wagon VARCHAR(50) NOT NULL,
             is_taken BOOLEAN DEFAULT FALSE,
-            last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         );
     ]])
 
-    
     MySQL.Async.execute('UPDATE UntamedGarage SET is_taken = FALSE', {}, function(rowsChanged)
         if Config.Debug then print("All wagons marked as available.") end
     end)
 end)
 
-
 local function saveWagonToDB(charidentifier, job, wagon)
-    MySQL.Async.execute('INSERT INTO UntamedGarage (charidentifier, job, wagon) VALUES (@charidentifier, @job, @wagon)', {
+    MySQL.Async.execute('INSERT INTO UntamedGarage (charidentifier, job, wagon, last_used) VALUES (@charidentifier, @job, @wagon, CURRENT_TIMESTAMP)', {
         ['@charidentifier'] = charidentifier,
         ['@job'] = job,
         ['@wagon'] = wagon
     })
 end
-
 
 local function getSpecificWagonFromDB(job, wagon, cb)
     local query = 'SELECT * FROM UntamedGarage WHERE job = @job'
@@ -45,20 +42,17 @@ local function getSpecificWagonFromDB(job, wagon, cb)
     end)
 end
 
-
 local function markWagonAsTaken(id)
     MySQL.Async.execute('UPDATE UntamedGarage SET is_taken = TRUE, last_used = CURRENT_TIMESTAMP WHERE id = @id', {
         ['@id'] = id
     })
 end
 
-
 local function markWagonAsReturned(id)
     MySQL.Async.execute('UPDATE UntamedGarage SET is_taken = FALSE WHERE id = @id', {
         ['@id'] = id
     })
 end
-
 
 RegisterServerEvent("untamed_garage:wagonDestroyed")
 AddEventHandler("untamed_garage:wagonDestroyed", function(wagon)
@@ -141,7 +135,6 @@ AddEventHandler('untamed_garage:parkWagon', function(wagonModel, wagonNetId)
 
     if Config.Debug then print("Updating database for parked wagon:", wagonModel, "by job:", job) end
 
-   
     MySQL.Async.execute('UPDATE UntamedGarage SET is_taken = 0 WHERE wagon = @wagon AND job = @job AND is_taken = 1 LIMIT 1', {
         ['@wagon'] = wagonModel,
         ['@job'] = job
@@ -155,7 +148,6 @@ AddEventHandler('untamed_garage:parkWagon', function(wagonModel, wagonNetId)
         end
     end)
 end)
-
 
 RegisterNetEvent("untamed_garage:getStoredWagons")
 AddEventHandler("untamed_garage:getStoredWagons", function(job, garageIndex)
